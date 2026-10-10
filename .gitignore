@@ -1,0 +1,4 @@
+# west build output (debug and release)
+/build/
+/build-release/
+.cache/

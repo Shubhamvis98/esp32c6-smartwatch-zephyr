@@ -1,0 +1,45 @@
+/* Flash layout shared by the app and MCUboot (sysbuild/mcuboot.overlay):
+ * two app slots for wireless updates (slot1 is one sector smaller, as
+ * MCUboot's swap-move needs), settings, and a 7.5 MB LittleFS partition
+ * mounted at /data. */
+&flash0 {
+	partitions {
+		/delete-node/ partition@20000;
+		/delete-node/ partition@7e0000;
+		/delete-node/ partition@fa0000;
+		/delete-node/ partition@fa8000;
+		/delete-node/ partition@fb0000;
+
+		slot0_partition: partition@20000 {
+			compatible = "zephyr,mapped-partition";
+			label = "image-0";
+			reg = <0x20000 DT_SIZE_K(4096)>;
+		};
+		slot1_partition: partition@420000 {
+			compatible = "zephyr,mapped-partition";
+			label = "image-1";
+			reg = <0x420000 DT_SIZE_K(4092)>;
+		};
+		slot0_lpcore_partition: partition@820000 {
+			compatible = "zephyr,mapped-partition";
+			label = "image-0-lpcore";
+			reg = <0x820000 DT_SIZE_K(32)>;
+		};
+		slot1_lpcore_partition: partition@828000 {
+			compatible = "zephyr,mapped-partition";
+			label = "image-1-lpcore";
+			reg = <0x828000 DT_SIZE_K(32)>;
+		};
+		storage_partition: partition@830000 {
+			compatible = "zephyr,mapped-partition";
+			label = "storage";
+			reg = <0x830000 DT_SIZE_K(192)>;
+		};
+		data_partition: partition@860000 {
+			compatible = "zephyr,mapped-partition";
+			label = "data";
+			reg = <0x860000 DT_SIZE_K(7680)>;
+		};
+	};
+};
+

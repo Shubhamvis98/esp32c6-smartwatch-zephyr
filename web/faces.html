@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Watch faces</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #111; color: #eee; margin: 0; padding: 16px; max-width: 760px; }
+  h1 { font-size: 22px; margin: 0 0 12px; }
+  h2 { font-size: 17px; margin: 22px 0 8px; color: #4fa3ff; }
+  .face { display: flex; align-items: center; gap: 10px; background: #1c1c1e; border-radius: 10px; padding: 10px 12px; margin: 6px 0; }
+  .face .info { flex: 1; }
+  .face small { color: #8e8e93; display: block; }
+  .tag { font-size: 11px; color: #8e8e93; border: 1px solid #444; border-radius: 6px; padding: 1px 6px; margin-left: 6px; }
+  .active { color: #3ddc84; font-weight: 600; }
+  button, label.btn { background: #3a3a3c; color: #eee; border: 0; border-radius: 8px; padding: 7px 12px; font-size: 14px; cursor: pointer; }
+  button.primary { background: #0a84ff; }
+  button.danger { background: #ff453a; }
+  input[type=text] { background: #1c1c1e; color: #eee; border: 1px solid #444; border-radius: 8px; padding: 7px; }
+  textarea { width: 100%; height: 340px; box-sizing: border-box; background: #1c1c1e; color: #eee; border: 1px solid #444;
+             border-radius: 8px; font: 13px ui-monospace, monospace; padding: 8px; }
+  #log { white-space: pre-wrap; font: 13px ui-monospace, monospace; background: #1c1c1e; border-radius: 8px; padding: 8px; min-height: 1.5em; }
+  .err { color: #ff453a; } .ok { color: #3ddc84; }
+  details { background: #1c1c1e; border-radius: 8px; padding: 8px 12px; margin-top: 10px; }
+  code { color: #ffd60a; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
+</style>
+</head>
+<body>
+<h1>⌚ Watch faces</h1>
+<div id="faces">Loading…</div>
+<div id="space" style="color:#8e8e93;font-size:13px"></div>
+
+<h2>Upload a face</h2>
+<p style="color:#8e8e93;font-size:14px;margin:0">
+  Pick a folder containing <code>face.json</code> and its images (PNG or JPG; they are converted on upload).</p>
+<div class="row">
+  <label class="btn">Choose folder<input id="folder" type="file" webkitdirectory multiple hidden></label>
+  <label class="btn">…or files<input id="files" type="file" multiple hidden></label>
+  <span>id <input id="fid" type="text" size="16" placeholder="my-face"></span>
+  <button class="primary" id="upload">Upload &amp; show</button>
+</div>
+<div id="picked" style="color:#8e8e93;font-size:13px"></div>
+
+<h2>Edit face.json</h2>
+<div class="row">
+  <span>id <input id="eid" type="text" size="16" placeholder="my-face"></span>
+  <button id="load">Load</button>
+  <button id="template">New from template</button>
+  <button class="primary" id="save">Save &amp; show</button>
+</div>
+<textarea id="json" spellcheck="false"></textarea>
+
+<h2>Result</h2>
+<div id="log"></div>
+
+<details>
+<summary>face.json reference</summary>
+<p><b>Top level:</b> <code>name</code>, <code>desc</code>, <code>background</code> ("#RRGGBB"),
+<code>background_image</code> (240×280 image),
+<code>elements</code> (drawn in order).</p>
+<p><b>Every element:</b> <code>type</code>, <code>x</code>, <code>y</code> (offset), <code>align</code>:
+center, top, bottom, left, right, top_left, top_right, bottom_left, bottom_right (screen 240×280).</p>
+<ul>
+<li><code>text</code>: <code>text</code>, <code>font</code> (14 16 20 24 36 48), <code>color</code>, <code>width</code>,
+  <code>text_align</code> (left center right), <code>letter_space</code></li>
+<li><code>rect</code>: <code>w</code>, <code>h</code>, <code>color</code>, <code>radius</code>, <code>opacity</code> (0–255),
+  <code>border_width</code>, <code>border_color</code></li>
+<li><code>image</code>: <code>src</code> ("logo.png")</li>
+<li><code>arc</code>: <code>value</code> (steps battery seconds minutes hours), <code>size</code>, <code>width</code>,
+  <code>color</code>, <code>bg_color</code>, <code>start_angle</code>, <code>end_angle</code> (0° = 3 o'clock, clockwise), <code>rounded</code></li>
+<li><code>bar</code>: <code>value</code>, <code>w</code>, <code>h</code>, <code>color</code>, <code>bg_color</code>, <code>radius</code></li>
+<li><code>hand</code>: <code>hand</code> (hour minute second), <code>cx</code>, <code>cy</code> (pivot on screen, default 120,140);
+  line hand: <code>length</code>, <code>tail</code>, <code>width</code>, <code>color</code>;
+  image hand: <code>src</code> drawn pointing to 12, <code>pivot_x</code>, <code>pivot_y</code> (default bottom centre), under 48 KB</li>
+</ul>
+<p><b>Text tokens:</b> <code>{HH}</code> <code>{H}</code> hour (12/24 h setting), <code>{mm}</code>, <code>{ss}</code>,
+<code>{AMPM}</code>, <code>{day}</code> Monday, <code>{ddd}</code> Mon, <code>{DDD}</code> MON, <code>{D}</code> <code>{DD}</code> day of month,
+<code>{month}</code> January, <code>{mmm}</code> Jan, <code>{MMM}</code> JAN, <code>{MM}</code> month number, <code>{YYYY}</code>,
+<code>{steps}</code>, <code>{goal}</code>, <code>{battery}</code></p>
+</details>
+
+<script>
+const $ = id => document.getElementById(id);
+const TEMPLATE = {
+  name: "My face", desc: "Made in the browser", background: "#000000",
+  elements: [
+    { type: "arc", value: "steps", size: 220, width: 8, color: "#3DDC84", bg_color: "#1C1C1E" },
+    { type: "text", text: "{HH}:{mm}", font: 48, color: "#FFFFFF", y: -20 },
+    { type: "text", text: "{ss}", font: 20, color: "#0A84FF", y: 22 },
+    { type: "text", text: "{DDD} {D} {MMM}", font: 16, color: "#8E8E93", y: 52 },
+    { type: "text", text: "{steps} steps", font: 14, color: "#3DDC84", align: "bottom", y: -26 }
+  ]
+};
+
+function log(msg, cls) { const l = $('log'); l.className = cls || ''; l.textContent = msg; }
+
+async function api(method, url, body) {
+  const r = await fetch(url, { method, body });
+  const t = await r.text();
+  if (!r.ok) throw new Error(t || r.statusText);
+  try { return JSON.parse(t); } catch { return t; }
+}
+
+async function refresh() {
+  try {
+    const d = await api('GET', '/api/faces');
+    const box = $('faces'); box.innerHTML = '';
+    for (const f of d.faces) {
+      const row = document.createElement('div'); row.className = 'face';
+      row.innerHTML = `<div class="info"><span class="${f.active ? 'active' : ''}"></span>
+        ${f.custom ? '<span class="tag">custom</span>' : '<span class="tag">built-in</span>'}<small></small></div>`;
+      row.querySelector('span').textContent = (f.active ? '✓ ' : '') + f.name;
+      row.querySelector('small').textContent = f.id + ' · ' + f.desc;
+      const show = document.createElement('button'); show.textContent = 'Show';
+      show.onclick = () => reload(f.id);
+      row.appendChild(show);
+      if (f.custom) {
+        const ed = document.createElement('button'); ed.textContent = 'Edit';
+        ed.onclick = () => { $('eid').value = f.id; loadJson(); };
+        const del = document.createElement('button'); del.textContent = 'Delete'; del.className = 'danger';
+        del.onclick = async () => {
+          if (!confirm('Delete ' + f.name + '?')) return;
+          try { await api('DELETE', '/api/faces/' + f.id); log('Deleted ' + f.id, 'ok'); }
+          catch (e) { log(e.message, 'err'); }
+          refresh();
+        };
+        row.append(ed, del);
+      }
+      box.appendChild(row);
+    }
+    $('space').textContent = d.free_kb + ' KB free on the watch';
+  } catch (e) { $('faces').textContent = 'Watch not reachable: ' + e.message; }
+}
+
+async function reload(id) {
+  try {
+    const r = await api('POST', '/api/reload' + (id ? '?select=' + encodeURIComponent(id) : ''));
+    if (r.ok) log('Showing ' + r.active + ' on the watch', 'ok');
+    else log((r.active !== id ? id + ' could not be shown (watch fell back to ' + r.active + ')\n' : '') +
+             (r.error || ''), 'err');
+  } catch (e) { log(e.message, 'err'); }
+  refresh();
+}
+
+/* ── Image conversion: PNG/JPG → LVGL v9 .bin (RGB565, or RGB565A8 with alpha) ── */
+async function toBin(file) {
+  const bmp = await createImageBitmap(file);
+  const w = bmp.width, h = bmp.height;
+  if (w > 480 || h > 480) throw new Error(file.name + ' is ' + w + '×' + h + '; the screen is 240×280');
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d'); g.drawImage(bmp, 0, 0);
+  const px = g.getImageData(0, 0, w, h).data;
+  let alpha = false;
+  for (let i = 3; i < px.length; i += 4) if (px[i] < 255) { alpha = true; break; }
+  const stride = w * 2;
+  const buf = new ArrayBuffer(12 + stride * h + (alpha ? w * h : 0));
+  const dv = new DataView(buf);
+  dv.setUint8(0, 0x19); dv.setUint8(1, alpha ? 0x14 : 0x12);       // magic, RGB565A8 / RGB565
+  dv.setUint16(2, 0, true); dv.setUint16(4, w, true); dv.setUint16(6, h, true);
+  dv.setUint16(8, stride, true); dv.setUint16(10, 0, true);
+  let o = 12;
+  for (let i = 0; i < px.length; i += 4) {
+    dv.setUint16(o, ((px[i] & 0xF8) << 8) | ((px[i + 1] & 0xFC) << 3) | (px[i + 2] >> 3), true); o += 2;
+  }
+  if (alpha) for (let i = 3; i < px.length; i += 4) dv.setUint8(o++, px[i]);
+  return new Blob([buf]);
+}
+
+let picked = [];
+function pick(list) {
+  picked = [...list].filter(f => !f.name.startsWith('.'));
+  const dir = picked[0] && picked[0].webkitRelativePath ? picked[0].webkitRelativePath.split('/')[0] : '';
+  if (dir && !$('fid').value) $('fid').value = dir.toLowerCase().replace(/[^a-z0-9_-]/g, '-').slice(0, 23);
+  $('picked').textContent = picked.map(f => f.name).join(', ');
+}
+$('folder').onchange = e => pick(e.target.files);
+$('files').onchange = e => pick(e.target.files);
+
+$('upload').onclick = async () => {
+  const id = $('fid').value.trim();
+  if (!/^[a-z0-9_-]{1,23}$/.test(id)) return log('id must be 1–23 of a-z 0-9 _ -', 'err');
+  const json = picked.find(f => f.name === 'face.json');
+  if (!json) return log('face.json is missing', 'err');
+  try { JSON.parse(await json.text()); } catch (e) { return log('face.json: ' + e.message, 'err'); }
+  try {
+    for (const f of picked) {
+      if (f === json) continue;
+      const img = /\.(png|jpe?g)$/i.test(f.name);
+      if (!img && !/\.bin$/i.test(f.name)) continue;
+      const name = img ? f.name.replace(/\.(png|jpe?g)$/i, '.bin') : f.name;
+      log('Uploading ' + name + '…');
+      await api('PUT', '/api/faces/' + id + '/' + name, img ? await toBin(f) : f);
+    }
+    log('Uploading face.json…');
+    await api('PUT', '/api/faces/' + id + '/face.json', json);   // last: the face appears complete
+    await reload(id);
+  } catch (e) { log(e.message, 'err'); }
+};
+
+async function loadJson() {
+  const id = $('eid').value.trim();
+  try {
+    const t = await (await fetch('/api/faces/' + id + '/face.json')).text();
+    $('json').value = JSON.stringify(JSON.parse(t), null, 2);
+    log('Loaded ' + id);
+  } catch (e) { log('Could not load ' + id + '/face.json', 'err'); }
+}
+$('load').onclick = loadJson;
+$('template').onclick = () => {
+  $('json').value = JSON.stringify(TEMPLATE, null, 2);
+  if (!$('eid').value) $('eid').value = 'my-face';
+};
+$('save').onclick = async () => {
+  const id = $('eid').value.trim();
+  if (!/^[a-z0-9_-]{1,23}$/.test(id)) return log('id must be 1–23 of a-z 0-9 _ -', 'err');
+  let text = $('json').value;
+  try { text = JSON.stringify(JSON.parse(text), null, 1); } catch (e) { return log('JSON: ' + e.message, 'err'); }
+  try { await api('PUT', '/api/faces/' + id + '/face.json', text); await reload(id); }
+  catch (e) { log(e.message, 'err'); }
+};
+
+refresh();
+</script>
+</body>
+</html>

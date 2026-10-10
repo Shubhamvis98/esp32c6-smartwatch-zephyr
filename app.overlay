@@ -1,0 +1,12 @@
+/*
+ * Smartwatch board tweaks:
+ *  - the app talks to the touch controller, IMU and RTC itself over I2C and
+ *    polls the buttons, so their Zephyr drivers are switched off;
+ *  - flash layout in partitions.dtsi (shared with MCUboot).
+ */
+#include "partitions.dtsi"
+
+/* ES8311 codec: I2S with MCLK on GPIO19 (pins in the board's i2s_default) */
+&i2s {
+	status = "okay";
+};

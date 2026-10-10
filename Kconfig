@@ -1,0 +1,41 @@
+mainmenu "Smartwatch"
+
+menu "Smartwatch"
+
+    config WATCH_WIFI_SSID
+        string "Default Wi-Fi SSID (optional)"
+        default ""
+        help
+            Fallback network for NTP time sync, used only until a network is
+            connected from the watch's Wi-Fi tab (which is saved in NVS and
+            takes priority).  Leave empty to set up Wi-Fi on the watch.
+
+    config WATCH_WIFI_PASSWORD
+        string "Default Wi-Fi password"
+        default ""
+
+    config WATCH_NTP_SERVER
+        string "NTP server"
+        default "pool.ntp.org"
+
+    config WATCH_TIMEZONE
+        string "Default timezone (POSIX TZ string)"
+        default "UTC0"
+        help
+            Examples: "UTC0", "CET-1CEST,M3.5.0,M10.5.0/3",
+            "EST5EDT,M3.2.0,M11.1.0", "IST-5:30", "JST-9".
+            The RTC always stores UTC; this only affects what is displayed.
+            Used until a timezone is picked on the watch (Settings → Time).
+
+    config WATCH_TIME_SYNC_INTERVAL_H
+        int "Hours between automatic time syncs"
+        range 1 168
+        default 12
+
+    config WATCH_STEP_GOAL
+        int "Daily step goal"
+        default 8000
+
+endmenu
+
+source "Kconfig.zephyr"

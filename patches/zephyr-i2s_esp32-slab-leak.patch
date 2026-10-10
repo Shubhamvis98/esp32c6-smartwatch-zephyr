@@ -1,0 +1,54 @@
+diff --git a/drivers/i2s/i2s_esp32.c b/drivers/i2s/i2s_esp32.c
+index 5761081b202..0720e300b77 100644
+--- a/drivers/i2s/i2s_esp32.c
++++ b/drivers/i2s/i2s_esp32.c
+@@ -215,6 +215,7 @@ static void IRAM_ATTR i2s_esp32_rx_callback(void *arg, int status)
+ #endif /* SOC_GDMA_SUPPORTED */
+ 		dev_data->state = I2S_STATE_ERROR;
+ 		LOG_DBG("RX status bad: %d", status);
++		k_mem_slab_free(stream->data->i2s_cfg.mem_slab, stream->data->mem_block);
+ 		goto rx_disable;
+ 	}
+ 
+@@ -269,6 +270,8 @@ static void IRAM_ATTR i2s_esp32_rx_callback(void *arg, int status)
+ 	if (err < 0) {
+ 		LOG_DBG("RX queue full");
+ 		dev_data->state = I2S_STATE_ERROR;
++		/* The block never reached the queue: give it back to the slab */
++		k_mem_slab_free(stream->data->i2s_cfg.mem_slab, stream->data->mem_block);
+ 		goto rx_disable;
+ 	}
+ 
+@@ -387,6 +390,11 @@ static void IRAM_ATTR i2s_esp32_rx_stop_transfer(const struct device *dev)
+ 	i2s_hal_clear_intr_status(hal, I2S_INTR_MAX);
+ #endif /* SOC_GDMA_SUPPORTED */
+ 
++	/* Stopped mid-transfer: the block was never queued, so free it */
++	if (stream->data->dma_pending && stream->data->mem_block != NULL) {
++		k_mem_slab_free(stream->data->i2s_cfg.mem_slab, stream->data->mem_block);
++	}
++	stream->data->dma_pending = false;
+ 	stream->data->mem_block = NULL;
+ 	stream->data->mem_block_len = 0;
+ 
+@@ -439,6 +447,8 @@ void IRAM_ATTR i2s_esp32_tx_compl_transfer(struct k_timer *timer)
+ 	if (err < 0) {
+ 		dev_data->state = I2S_STATE_ERROR;
+ 		LOG_DBG("Failed to restart TX transfer: %d", err);
++		k_mem_slab_free(stream->data->i2s_cfg.mem_slab, stream->data->mem_block);
++		stream->data->mem_block = NULL;
+ 		goto tx_disable;
+ 	}
+ 
+@@ -590,6 +600,11 @@ static void IRAM_ATTR i2s_esp32_tx_stop_transfer(const struct device *dev)
+ 	i2s_hal_clear_intr_status(hal, I2S_INTR_MAX);
+ #endif /* SOC_GDMA_SUPPORTED */
+ 
++	/* Stopped mid-transfer: the block in flight is no longer in the queue */
++	if (stream->data->dma_pending && stream->data->mem_block != NULL) {
++		k_mem_slab_free(stream->data->i2s_cfg.mem_slab, stream->data->mem_block);
++	}
++	stream->data->dma_pending = false;
+ 	stream->data->mem_block = NULL;
+ 	stream->data->mem_block_len = 0;
+ 
