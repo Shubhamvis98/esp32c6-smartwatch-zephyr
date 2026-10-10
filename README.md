@@ -59,17 +59,22 @@ Add `-p` to `build.sh` for a pristine build. The release build is
 to 0x20000 instead of 0x0, so the old bootloader keeps running, and it
 ignores the OTA trailer. `flash.sh` works around this.
 
-### Zephyr patch
+### Zephyr changes
 
-`patches/zephyr-i2s_esp32-slab-leak.patch` fixes the ESP32 I2S driver, and it
-is applied to the Zephyr tree in the container. When RX overflowed (the mic
-task was starved for a moment), the driver kept the block being filled. TX did
-the same when stopped mid-transfer. After four overflows every block was
-gone, so the mic only returned silence and the audio task blocked forever.
-Re-apply it after updating Zephyr:
+The app needs two commits on top of upstream Zephyr. Both are on `main` in
+the Zephyr tree in the container (`/root/build/zephyr/zephyr`), after the
+board commit:
+
+- `c576fc00c11` drivers: i2s: esp32: free blocks lost on errors and stop.
+  - When RX overflowed (the mic task was starved for a moment), the driver kept the block being filled. TX did the same when stopped mid-transfer.
+  - After four overflows every block was gone, so the mic only returned silence and the audio task blocked forever.
+- `2a7643224ad` boards: waveshare: esp32c6_touch_lcd_1_69: skip battery ADC calibration.
+
+If you move to a newer Zephyr, rebase those commits (`git rebase`), or apply
+the I2S fix on its own from `patches/`:
 
 ```sh
-cd /root/build/zephyr/zephyr && git apply /root/build/smartwatch/patches/zephyr-i2s_esp32-slab-leak.patch
+cd /root/build/zephyr/zephyr && git am -3 /root/build/smartwatch/patches/zephyr-i2s_esp32-slab-leak.patch
 ```
 
 ## Shell test commands

@@ -1,3 +1,25 @@
+From c576fc00c119192d0331e3c6ecb011e27f40fa27 Mon Sep 17 00:00:00 2001
+From: Shubham Vishwakarma <shubhamvis98@fossfrog.in>
+Date: Sat, 10 Oct 2026 03:44:59 +0000
+Subject: [PATCH] drivers: i2s: esp32: free blocks lost on errors and stop
+
+When the RX queue was full (the reader fell behind), or the DMA reported
+an error, the block being filled was neither queued nor freed. Stopping
+a transfer mid-block also dropped the in-flight RX or TX block, and a
+failed TX DMA restart leaked the block taken from the queue.
+
+Each event lost one slab block for good. With a few blocks per slab,
+after a handful of overflows START failed with -ENOMEM, the stream could
+not be restarted, and i2s_buf_write() waited forever for a free block.
+
+Free the block on those paths.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Signed-off-by: Shubham Vishwakarma <shubhamvis98@fossfrog.in>
+---
+ drivers/i2s/i2s_esp32.c | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
 diff --git a/drivers/i2s/i2s_esp32.c b/drivers/i2s/i2s_esp32.c
 index 5761081b202..0720e300b77 100644
 --- a/drivers/i2s/i2s_esp32.c
@@ -52,3 +74,6 @@ index 5761081b202..0720e300b77 100644
  	stream->data->mem_block = NULL;
  	stream->data->mem_block_len = 0;
  
+-- 
+2.47.3
+
